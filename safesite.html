@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#080e0a"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="description" content="SafeSite — AI-powered construction site risk assessment"/>
+<title>SafeSite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #080e0a; --surface: #0f1610; --card: #131e14; --border: #1e3020;
+    --green: #22c55e; --green-d: #16a34a; --green-l: #4ade80;
+    --blue: #3b82f6; --yellow: #f59e0b; --red: #ef4444;
+    --text: #e8f0e9; --sub: #a0b8a3; --muted: #536857;
+    --input-bg: #0c150d;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Barlow', sans-serif; overflow: hidden; }
+  #root { height: 100dvh; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; position: relative; overflow: hidden; }
+  .screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; animation: fadeIn 0.18s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 18px; }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  /* Hazard stripe */
+  .hazard { height: 7px; background: repeating-linear-gradient(-45deg, var(--yellow), var(--yellow) 8px, #111 8px, #111 16px); flex-shrink: 0; }
+
+  /* Header */
+  .hdr { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+  .hdr-title { flex: 1; font-family: 'Rajdhani', sans-serif; font-size: 17px; font-weight: 700; letter-spacing: 1.5px; }
+  .back-btn { background: none; border: none; color: var(--sub); font-size: 22px; cursor: pointer; padding: 2px 6px 2px 0; line-height: 1; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .tag { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+
+  /* Buttons */
+  .btn { width: 100%; padding: 14px; border-radius: 10px; border: none; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 1.5px; transition: opacity 0.15s; }
+  .btn:active { opacity: 0.8; }
+  .btn-primary { background: var(--green); color: #000; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { flex: 1; padding: 13px 8px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Inputs */
+  input, textarea { width: 100%; padding: 13px 16px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Barlow', sans-serif; font-size: 15px; outline: none; }
+  input::placeholder { color: var(--muted); }
+  input:focus { border-color: var(--green); }
+
+  /* Toggle tabs */
+  .tab-row { display: flex; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 4px; margin-bottom: 20px; }
+  .tab { flex: 1; padding: 10px; border-radius: 8px; border: none; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 1.5px; transition: all 0.15s; background: transparent; color: var(--muted); }
+  .tab.active { background: var(--green); color: #000; }
+
+  /* Home menu items */
+  .menu-item { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: opacity 0.15s; text-decoration: none; }
+  .menu-item:active { opacity: 0.7; }
+  .menu-item .icon { font-size: 28px; min-width: 40px; text-align: center; }
+  .menu-item .label { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 16px; color: var(--text); }
+  .menu-item .sublabel { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .menu-item .arrow { margin-left: auto; color: var(--muted); font-size: 20px; }
+
+  /* Score display */
+  .score-big { font-family: 'Rajdhani', sans-serif; font-size: 68px; font-weight: 700; line-height: 1; }
+  .score-label { font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 3px; }
+
+  /* Risk card */
+  .risk-card { border-radius: 10px; margin-bottom: 12px; overflow: hidden; border-width: 1px; border-style: solid; }
+  .risk-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 8px; }
+  .risk-row { display: flex; padding: 7px 14px; border-top: 1px solid rgba(30,48,32,0.6); gap: 12px; }
+  .risk-row-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; min-width: 110px; padding-top: 2px; }
+  .risk-row-val { font-size: 13px; color: var(--text); line-height: 1.6; flex: 1; }
+
+  /* Divider */
+  .divider { display: flex; align-items: center; gap: 10px; margin: 20px 0; }
+  .divider-line { flex: 1; height: 1px; background: var(--border); }
+  .divider-text { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+
+  /* Step block */
+  .step { display: flex; gap: 14px; margin-bottom: 22px; }
+  .step-num { width: 32px; height: 32px; border-radius: 50%; background: var(--green); color: #000; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .step-title { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 5px; }
+  .step-body { font-size: 13px; color: var(--sub); line-height: 1.7; }
+  .step-link { color: var(--green); font-size: 13px; font-weight: 600; text-decoration: underline; display: inline-block; margin-top: 6px; }
+
+  /* Warning banner */
+  .warn-banner { background: #1a0e00; border: 1px solid rgba(245,158,11,0.35); border-radius: 12px; padding: 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .warn-title { color: var(--yellow); font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+  .warn-sub { color: var(--sub); font-size: 12px; line-height: 1.6; }
+
+  /* Error box */
+  .err-box { background: #1e0808; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
+  .err-box p { color: #fca5a5; font-size: 13px; }
+
+  /* Modal overlay */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 100; }
+  .modal-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 100%; max-width: 320px; text-align: center; }
+
+  /* Loading */
+  .loading-wrap { text-align: center; padding: 40px 20px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .pulse { animation: pulse 1.5s ease-in-out infinite; }
+  .dots { display: flex; justify-content: center; gap: 6px; margin-top: 16px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .dot:nth-child(2) { animation: pulse 1.2s ease-in-out 0.2s infinite; }
+  .dot:nth-child(3) { animation: pulse 1.2s ease-in-out 0.4s infinite; }
+
+  /* Report history item */
+  .rpt-item { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .rpt-thumb { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+  .rpt-del { border: 1px solid rgba(239,68,68,0.3); border-radius: 7px; padding: 6px 10px; font-size: 10px; font-weight: 700; color: var(--red); cursor: pointer; background: none; letter-spacing: 0.5px; flex-shrink: 0; }
+
+  /* Image preview */
+  .preview-img { width: 100%; max-height: 280px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); display: block; margin-bottom: 16px; }
+
+  /* About rows */
+  .about-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+
+  /* Logo */
+  .logo-wrap { width: 80px; height: 80px; border-radius: 20px; background: var(--card); border: 2px solid var(--green); display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 0 32px rgba(34,197,94,0.15); }
+
+  /* Key input row */
+  .key-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .key-input { flex: 1; font-family: monospace; font-size: 13px; }
+  .eye-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; cursor: pointer; font-size: 18px; }
+
+  /* Info box */
+  .info-box { background: #08101a; border: 1px solid rgba(59,130,246,0.2); border-radius: 12px; padding: 14px; margin-top: 4px; }
+  .info-title { color: var(--blue); font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+  .info-body { font-size: 12px; color: var(--sub); line-height: 1.8; }
+
+  /* Saved chip */
+  .saved-chip { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); border-radius: 20px; padding: 4px 12px; font-size: 11px; color: var(--green); font-weight: 700; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 60px 20px; }
+  .empty-icon { font-size: 52px; opacity: 0.25; margin-bottom: 16px; }
+  .empty-text { color: var(--muted); font-size: 14px; line-height: 1.8; }
+
+  /* Spacing helpers */
+  .mb8 { margin-bottom: 8px; }
+  .mb12 { margin-bottom: 12px; }
+  .mb16 { margin-bottom: 16px; }
+  .mb20 { margin-bottom: 20px; }
+  .mt8 { margin-top: 8px; }
+  .mt12 { margin-top: 12px; }
+  .mt16 { margin-top: 16px; }
+  .mt20 { margin-top: 20px; }
+  .mt24 { margin-top: 24px; }
+  .center { text-align: center; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .row-sb { display: flex; justify-content: space-between; align-items: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+const S = {
+  view: 'login', authMode: 'login',
+  user: null, apiKey: '', apiKeyDraft: '', apiKeyVisible: false,
+  img: null,   // { dataUrl, mimeType }
+  busy: false, result: null, imgError: '',
+  reports: [], viewing: null, saved: false,
+  deleteId: null,
+  form: { email: '', password: '', name: '' },
+  authError: '',
+};
+
+const SAFETY_LABELS = ['','Very Unsafe','Unsafe','Moderate Risk','Safe','Very Safe'];
+const SAFETY_EMOJI  = ['','🔴','🟠','🟡','🟢','✅'];
+const safetyColor   = s => s<=2?'var(--red)':s===3?'var(--yellow)':'var(--green)';
+const riskColor     = s => s>=15?'var(--red)':s>=8?'var(--yellow)':'var(--green)';
+const riskBg        = s => s>=15?'#180808':s>=8?'#191200':'#081308';
+
+// ═══════════════════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════════════════
+const getUsers   = ()    => { try { return JSON.parse(localStorage.getItem('ss:users')||'[]'); } catch { return []; } };
+const putUsers   = u     => localStorage.setItem('ss:users', JSON.stringify(u));
+const getReports = e     => { try { return JSON.parse(localStorage.getItem(`ss:rpts:${e}`)||'[]'); } catch { return []; } };
+const putReports = (e,r) => localStorage.setItem(`ss:rpts:${e}`, JSON.stringify(r));
+const getApiKey  = e     => localStorage.getItem(`ss:apikey:${e}`) || '';
+const putApiKey  = (e,k) => localStorage.setItem(`ss:apikey:${e}`, k);
+
+// ═══════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════
+function render() {
+  const root = document.getElementById('root');
+  root.innerHTML = '';
+  const screen = buildScreen();
+  root.appendChild(screen);
+}
+
+function el(tag, attrs={}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) {
+    if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+    else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === 'className') e.className = v;
+    else e.setAttribute(k, v);
+  }
+  for (const c of children.flat()) {
+    if (c == null || c === false) continue;
+    e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  }
+  return e;
+}
+
+function div(cls, ...children) { return el('div', {className: cls}, ...children); }
+function txt(cls, text, style={}) { return el('span', {className: cls, style}, text); }
+
+function hazard() { return div('hazard'); }
+
+function hdr(title, onBack, rightContent) {
+  const h = div('hdr');
+  if (onBack) {
+    const b = el('button', {className:'back-btn', onClick: onBack}, '←');
+    h.appendChild(b);
+  }
+  h.appendChild(el('span', {className:'hdr-title'}, title));
+  if (rightContent) h.appendChild(rightContent);
+  return h;
+}
+
+function btn(label, cls, onClick, disabled=false) {
+  const b = el('button', {className:`btn ${cls}`, onClick, disabled}, label);
+  return b;
+}
+
+function logo() {
+  return div('logo-wrap',
+    el('span', {style:{fontSize:'38px',lineHeight:'1.1'}}, '⛑️'),
+    el('span', {style:{fontSize:'18px',marginTop:'-4px'}}, '⚙️')
+  );
+}
+
+// ═══════════════════════════════════════════════════
+//  SCREENS
+// ═══════════════════════════════════════════════════
+function buildScreen() {
+  switch(S.view) {
+    case 'login':     return screenLogin();
+    case 'home':      return screenHome();
+    case 'preview':   return screenPreview();
+    case 'results':   return screenReport(S.result, false);
+    case 'viewReport':return screenReport(S.viewing, true);
+    case 'history':   return screenHistory();
+    case 'settings':  return screenSettings();
+    case 'about':     return screenAbout();
+    default:          return screenLogin();
+  }
+}
+
+// ── LOGIN ──────────────────────────────────────────
+function screenLogin() {
+  const wrap = div('screen');
+  wrap.appendChild(hazard());
+  const scroll = div('scroll', {style:{paddingTop:'44px',paddingBottom:'60px'}});
+
+  // Logo + title
+  const logoSection = div('', {style:{textAlign:'center',marginBottom:'32px'}});
+  logoSection.appendChild(logo());
+  logoSection.appendChild(el('h1', {style:{fontFamily:'Rajdhani,sans-serif',fontSize:'24px',fontWeight:'700',color:'var(--green)',letterSpacing:'2.5px',marginTop:'16px',marginBottom:'4px'}}, 'SAFESITE'));
+  logoSection.appendChild(el('p', {style:{color:'var(--muted)',fontSize:'11px',letterSpacing:'1px'}}, 'CONSTRUCTION SITE RISK ASSESSMENT'));
+  scroll.appendChild(logoSection);
+
+  // Tab toggle
+  const tabs = div('tab-row');
+  ['login','signup'].forEach(m => {
+    const t = el('button', {className:`tab${S.authMode===m?' active':''}`,
+      onClick:()=>{ S.authMode=m; S.authError=''; render(); }},
+      m==='login'?'LOG IN':'SIGN UP');
+    tabs.appendChild(t);
+  });
+  scroll.appendChild(tabs);
+
+  // Form
+  const formWrap = div('', {style:{display:'flex',flexDirection:'column',gap:'10px'}});
+  if (S.authMode==='signup') {
+    const ni = el('input', {type:'text', placeholder:'Full Name', value:S.form.name});
+    ni.addEventListener('input', e=>S.form.name=e.target.value);
+    formWrap.appendChild(ni);
+  }
+  const ei = el('input', {type:'email', placeholder:'Email Address', value:S.form.email, autocapitalize:'none'});
+  ei.addEventListener('input', e=>S.form.email=e.target.value);
+  formWrap.appendChild(ei);
+  const pi = el('input', {type:'password', placeholder:S.authMode==='signup'?'Password (min. 6 characters)':'Password', value:S.form.password});
+  pi.addEventListener('input', e=>S.form.password=e.target.value);
+  pi.addEventListener('keydown', e=>{ if(e.key==='Enter') doAuth(); });
+  formWrap.appendChild(pi);
+  scroll.appendChild(formWrap);
+
+  if (S.authError) {
+    scroll.appendChild(el('div', {className:'err-box', style:{marginTop:'10px'}},
+      el('p', {}, '⚠ ' + S.authError)
+    ));
+  }
+
+  scroll.appendChild(el('div',{style:{marginTop:'16px'}}, btn(S.authMode==='login'?'LOG IN  →':'CREATE ACCOUNT  →','btn-primary',doAuth)));
+
+  // Footer
+  const footer = div('card', {style:{marginTop:'44px',textAlign:'center'}});
+  footer.innerHTML = `<p style="color:var(--sub);font-size:13px;line-height:2">Made in India with ❤️ for construction<br>© Avijit Choudhuri<br>Version 1.0 – March 2026<br><span style="color:var(--muted)">brainquisitive@gmail.com</span></p>`;
+  scroll.appendChild(footer);
+
+  wrap.appendChild(scroll);
+  wrap.appendChild(hazard());
+  return wrap;
+}
+
+// ── HOME ───────────────────────────────────────────
+function screenHome() {
+  const wrap = div('screen');
+  wrap.appendChild(hazard());
+
+  // Header right
+  const rightBtns = div('row');
+  const settBtn = el('button',{style:{background:'none',border:'none',cursor:'pointer',fontSize:'20px',padding:'2px'},onClick:()=>{S.view='settings';render();}},'⚙️');
+  const abtBtn  = el('button',{style:{background:'none',border:'none',cursor:'pointer',fontSize:'20px',padding:'2px'},onClick:()=>{S.view='about';render();}},'ℹ️');
+  const logBtn  = el('button',{style:{border:`1px solid var(--border)`,borderRadius:'6px',padding:'5px 10px',fontSize:'10px',fontFamily:'Rajdhani,sans-serif',fontWeight:'700',letterSpacing:'1px',color:'var(--muted)',background:'none',cursor:'pointer'},onClick:doLogout},'LOG OUT');
+  rightBtns.append(settBtn, abtBtn, logBtn);
+  wrap.appendChild(hdr('SAFESITE', null, rightBtns));
+
+  const scroll = div('scroll');
+
+  // Welcome
+  const firstName = S.user?.name?.split(' ')[0] || 'there';
+  const welc = div('',{style:{marginBottom:'18px'}});
+  welc.appendChild(el('p',{className:'tag',style:{marginBottom:'4px'}},'Welcome back'));
+  welc.appendChild(el('h2',{style:{fontSize:'22px',fontWeight:'700',color:'var(--text)'}},'Hello, '+firstName+' 👷'));
+  scroll.appendChild(welc);
+
+  // API key warning
+  if (!S.apiKey) {
+    const warn = div('warn-banner');
+    warn.onclick = ()=>{S.view='settings';render();};
+    warn.innerHTML = `<span style="font-size:22px">⚠️</span><div style="flex:1"><div class="warn-title">API Key Not Set</div><div class="warn-sub">You need a free Anthropic API key to analyze sites. Tap here — takes 2 minutes to set up.</div></div><span style="color:var(--yellow);font-size:18px">›</span>`;
+    scroll.appendChild(warn);
+  }
+
+  scroll.appendChild(el('p',{style:{fontSize:'13px',color:'var(--sub)',marginBottom:'18px',lineHeight:'1.7'}},'Give me a snap of your construction site'));
+
+  // Hidden file inputs
+  const galleryInput = el('input',{type:'file',accept:'image/*',style:{display:'none'}});
+  galleryInput.addEventListener('change', e=>onFileSelected(e));
+  const cameraInput  = el('input',{type:'file',accept:'image/*',capture:'environment',style:{display:'none'}});
+  cameraInput.addEventListener('change', e=>onFileSelected(e));
+  scroll.appendChild(galleryInput);
+  scroll.appendChild(cameraInput);
+
+  const items = [
+    {icon:'📷', label:'Camera',               sub:'Capture a new photo of the site',        accent:'var(--green)', fn:()=>cameraInput.click()},
+    {icon:'🖼️', label:'Gallery',              sub:'Upload an existing photo from device',   accent:'var(--yellow)',fn:()=>galleryInput.click()},
+    {icon:'📋', label:'Review Earlier Output',sub:`${S.reports.length} saved report${S.reports.length!==1?'s':''}`, accent:'var(--blue)',  fn:()=>{S.view='history';render();}},
+  ];
+  items.forEach(item => {
+    const row = div('menu-item');
+    row.style.borderLeft = `4px solid ${item.accent}`;
+    row.onclick = item.fn;
+    row.innerHTML = `<span class="icon">${item.icon}</span><div><div class="label">${item.label}</div><div class="sublabel">${item.sub}</div></div><span class="arrow">›</span>`;
+    scroll.appendChild(row);
+  });
+
+  wrap.appendChild(scroll);
+  wrap.appendChild(hazard());
+  return wrap;
+}
+
+// ── PREVIEW ────────────────────────────────────────
+function screenPreview() {
+  const wrap = div('screen');
+  wrap.appendChild(hazard());
+  wrap.appendChild(hdr('PREVIEW IMAGE', ()=>{ S.view='home'; S.img=null; S.imgError=''; render(); }));
+  const scroll = div('scroll');
+
+  if (S.img) {
+    const img = el('img', {src:S.img.dataUrl, className:'preview-img'});
+    scroll.appendChild(img);
+  }
+
+  // Error states
+  if (S.imgError === 'resolution') {
+    scroll.appendChild(errCard('🔍','PHOTO CLARITY INSUFFICIENT','Photo clarity is insufficient. Please upload a clearer construction site image.','var(--red)'));
+  } else if (S.imgError === 'not_construction_site') {
+    scroll.appendChild(errCard('🚫','NOT A CONSTRUCTION SITE','Uploaded image does not appear to be a construction site. Please upload a valid construction project photo.','var(--red)'));
+  } else if (S.imgError === 'invalid_key') {
+    const c = errCard('🔑','INVALID API KEY','Your API key was not accepted. Please check that you copied it correctly in Settings.','var(--yellow)');
+    c.appendChild(el('div',{style:{marginTop:'14px'}}, btn('GO TO SETTINGS','btn-primary',()=>{S.view='settings';render();})));
+    scroll.appendChild(c);
+  } else if (S.imgError === 'error') {
+    scroll.appendChild(div('err-box', el('p',{},'⚠ Analysis failed. Please check your internet connection and try again.')));
+  }
+
+  // Loading
+  if (S.busy) {
+    const lw = div('card loading-wrap');
+    lw.innerHTML = `<div class="pulse" style="font-size:44px;margin-bottom:14px">🔍</div>
+      <div style="font-family:Rajdhani,sans-serif;font-size:16px;color:var(--green);letter-spacing:3px;margin-bottom:8px">ANALYZING SITE...</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Identifying safety hazards and risks</div>
+      <div class="dots"><div class="dot pulse"></div><div class="dot"></div><div class="dot"></div></div>`;
+    scroll.appendChild(lw);
+  }
+
+  if (!S.busy && !S.imgError) {
+    scroll.appendChild(el('div',{style:{marginBottom:'10px'}},btn('🔍   ANALYZE SAFETY RISKS','btn-primary',doAnalyze)));
+  }
+  scroll.appendChild(btn('← BACK TO HOME','btn-outline',()=>{S.view='home';S.img=null;S.imgError='';render();}));
+
+  wrap.appendChild(scroll);
+  return wrap;
+}
+
+function errCard(icon, title, body, color) {
+  const c = div('card', {style:{marginBottom:'14px',textAlign:'center'}});
+  c.innerHTML = `<div style="font-size:36px;margin-bottom:10px">${icon}</div>
+    <div style="font-weight:700;color:${color};font-size:15px;letter-spacing:1px;margin-bottom:8px">${title}</div>
+    <div style="font-size:13px;color:var(--sub);line-height:1.7">${body}</div>`;
+  return c;
+}
+
+// ── REPORT ─────────────────────────────────────────
+function screenReport(res, isHistory) {
+  if (!res) return screenHome();
+  const sc = res.overallSafetyScore;
+  const wrap = div('screen');
+  wrap.appendChild(hazard());
+
+  const dateStr = new Date(res.analyzedAt).toLocaleDateString('en-IN');
+  const dateEl = el('span',{style:{fontSize:'11px',color:'var(--muted)'}},dateStr);
+  wrap.appendChild(hdr('SAFETY REPORT', ()=>{
+    if(isHistory){S.viewing=null;S.view='history';}else{S.view='home';}render();
+  }, dateEl));
+
+  const scroll = div('scroll');
+
+  if (res.imageDataUrl) {
+    scroll.appendChild(el('img',{src:res.imageDataUrl,className:'preview-img',style:{maxHeight:'160px'}}));
+  }
+
+  // Overall score card
+  const scoreCard = div('card mb16 center',{style:{borderColor:safetyColor(sc)+'44'}});
+  scoreCard.innerHTML = `
+    <div class="tag">Overall Safety Score</div>
+    <div class="score-big" style="color:${safetyColor(sc)};margin:10px 0 4px">${sc}<span style="font-size:22px;color:var(--muted);font-weight:400">/5</span></div>
+    <div class="score-label" style="color:${safetyColor(sc)};margin-bottom:12px">${SAFETY_EMOJI[sc]}  ${SAFETY_LABELS[sc]?.toUpperCase()}</div>
+    <p style="font-size:13px;color:var(--sub);line-height:1.7">${res.summaryComment}</p>`;
+  scroll.appendChild(scoreCard);
+
+  // Risk register
+  scroll.appendChild(el('div',{className:'tag',style:{marginBottom:'12px'}},`Risk Register — ${res.risks?.length} Risks Identified`));
+
+  res.risks?.forEach(risk => {
+    const rc = div('risk-card');
+    rc.style.borderColor = riskColor(risk.riskScore)+'33';
+    rc.style.borderLeftColor = riskColor(risk.riskScore);
+    rc.style.borderLeftWidth = '4px';
+    rc.style.background = riskBg(risk.riskScore);
+
+    const rh = div('risk-header');
+    rh.innerHTML = `<span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.5px">${risk.riskId}</span>
+      <span style="font-size:22px;font-weight:700;color:${riskColor(risk.riskScore)};font-family:Rajdhani,sans-serif">${risk.riskScore}<span style="font-size:11px;color:var(--muted)">/25</span></span>`;
+    rc.appendChild(rh);
+
+    [['RISK DESCRIPTION',risk.riskDescription],
+     ['IMPACT SCORE',`${risk.impactScore} / 5`],
+     ['LIKELIHOOD SCORE',`${risk.likelihoodScore} / 5`],
+     ['RISK SCORE',`${risk.riskScore} / 25`],
+     ['SUGGESTED IMPROVEMENT',risk.suggestedImprovement]
+    ].forEach(([lbl,val])=>{
+      const row = div('risk-row');
+      row.innerHTML = `<div class="risk-row-label">${lbl}</div><div class="risk-row-val">${val}</div>`;
+      rc.appendChild(row);
+    });
+    scroll.appendChild(rc);
+  });
+
+  // Confidence + disclaimer
+  const conf = div('card mb16',{style:{background:'#0a100a'}});
+  conf.innerHTML = `<div class="row-sb mb8"><div class="tag">AI Confidence Level</div>
+    <span style="font-weight:700;font-size:14px;color:${res.confidenceLevel==='High'?'var(--green)':res.confidenceLevel==='Medium'?'var(--yellow)':'var(--red)'}">${res.confidenceLevel}</span></div>
+    <p style="font-size:11px;color:var(--muted);line-height:1.8;font-style:italic">⚠️ The above risk register is machine generated and may not be exhaustive. Any decision purely based on the above output is not recommended. Manual checking of the site by an expert is recommended by us.</p>`;
+  scroll.appendChild(conf);
+
+  // Action buttons
+  const btnRow = div('btn-row mb20');
+  if (!isHistory) {
+    const saveBtn = btn(S.saved?'✓ SAVED':'💾 SAVE', S.saved?'btn-outline':'btn-primary', doSave, S.saved);
+    btnRow.appendChild(saveBtn);
+  }
+  btnRow.appendChild(btn('📥 DOWNLOAD','btn-blue',()=>doDownload(res)));
+  btnRow.appendChild(btn('🏠 HOME','btn-outline',()=>{S.viewing=null;S.view='home';render();}));
+  scroll.appendChild(btnRow);
+
+  wrap.appendChild(scroll);
+  return wrap;
+}
+
+// ── HISTORY ────────────────────────────────────────
+function screenHistory() {
+  const wrap = div('screen');
+  wrap.appendChild(hazard());
+  const countEl = el('span',{style:{fontSize:'11px',color:'var(--muted)'}},`${S.reports.length} report${S.reports.length!==1?'s':''}`);
+  wrap.appendChild(hdr('EARLIER REPORTS',()=>{S.view='home';render();},countEl));
+
+  if (S.reports.length === 0) {
+    const scroll = div('scroll');
+    const emp = div('empty');
+    emp.innerHTML = `<div class="empty-icon">📋</div><div class="empty-text">No saved reports yet.<br>Analyze a site and tap Save.</div>`;
+    emp.appendChild(el('div',{style:{marginTop:'20px'}},btn('GO TO HOME','btn-primary',()=>{S.view='home';render();})));
+    scroll.appendChild(emp);
+    wrap.appendChild(scroll);
+    return wrap;
+  }
+
+  const scroll = div('scroll');
+  S.reports.forEach(rpt => {
+    const item = div('rpt-item');
+    if (rpt.imageDataUrl) {
+      item.appendChild(el('img',{src:rpt.imageDataUrl,className:'rpt-thumb'}));
+    }
+    const info = div('',{style:{flex:'1'}});
+    const topRow = div('row-sb mb8');
+    topRow.innerHTML = `<span style="font-weight:700;font-size:14px">Score: <span style="color:${safetyColor(rpt.overallSafetyScore)}">${rpt.overallSafetyScore}/5</span></span>
+      <span style="font-weight:700;font-size:11px;color:${safetyColor(rpt.overallSafetyScore)}">${SAFETY_LABELS[rpt.overallSafetyScore]}</span>`;
+    info.appendChild(topRow);
+    info.appendChild(el('span',{style:{fontSize:'11px',color:'var(--muted)'}},
+      new Date(rpt.savedAt).toLocaleString('en-IN') + ' · ' + rpt.risks?.length + ' risks'));
+    item.appendChild(info);
+    item.onclick = (e)=>{ if(e.target.classList.contains('rpt-del')||e.target.closest('.rpt-del')) return; S.viewing=rpt;S.view='viewReport';render(); };
+
+    const delBtn = el('button',{className:'rpt-del',onClick:(e)=>{e.stopPropagation();S.deleteId=rpt.id;render();}},'DEL');
+    item.appendChild(delBtn);
+    scroll.appendChild(item);
+  });
+  wrap.appendChild(scroll);
+
+  // Delete modal
+  if (S.deleteId) {
+    const overlay = div('modal-overlay');
+    const box = div('modal-box');
+    box.innerHTML = `<div style="font-size:32px;margin-bottom:12px">🗑️</div>
+      <div style="font-weight:700;font-size:16px;margin-bottom:8px">DELETE REPORT?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">This action cannot be undone.</div>`;
+    const btnRow = div('btn-row');
+    btnRow.appendChild(btn('CANCEL','btn-outline',()=>{S.deleteId=null;render();}));
+    btnRow.appendChild(btn('DELETE','btn-red',()=>doDelete(S.deleteId)));
+    box.appendChild(btnRow);
+    overlay.appendChild(box);
+    wrap.appendChild(overlay);
+  }
+
+  return wrap;
+}
+
+// ── SETTINGS ───────────────────────────────────────
+function screenSettings() {
+  const wrap = div('screen');
+  wrap.appendChild(hazard());
+  wrap.appendChild(hdr('SETTINGS',()=>{S.view='home';render();}));
+  const scroll = div('scroll',{style:{paddingBottom:'48px'}});
+
+  // API key card
+  const keyCard = div('card mb20',{style:{borderColor:S.apiKey?'rgba(34,197,94,0.3)':'rgba(245,158,11,0.3)'}});
+  const keyHead = div('row mb12');
+  keyHead.innerHTML = `<span style="font-size:28px">${S.apiKey?'🔑':'🔓'}</span>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:15px">Anthropic API Key</div>
+      <div style="font-size:12px;font-weight:600;margin-top:2px;color:${S.apiKey?'var(--green)':'var(--yellow)'}">
+        ${S.apiKey?'✓ Key saved and active':'Not set — required to analyze photos'}
+      </div>
+    </div>`;
+  keyCard.appendChild(keyHead);
+
+  const keyRow = div('key-row');
+  const keyInp = el('input',{
+    type: S.apiKeyVisible?'text':'password',
+    placeholder:'Paste your key here  (sk-ant-...)',
+    value: S.apiKeyDraft,
+    className:'key-input',
+    autocomplete:'off', autocorrect:'off', autocapitalize:'none', spellcheck:'false'
+  });
+  keyInp.addEventListener('input', e=>S.apiKeyDraft=e.target.value);
+  const eyeBtn = el('button',{className:'eye-btn',onClick:()=>{S.apiKeyVisible=!S.apiKeyVisible;render();}},
+    S.apiKeyVisible?'🙈':'👁️');
+  keyRow.append(keyInp, eyeBtn);
+  keyCard.appendChild(keyRow);
+  keyCard.appendChild(btn('💾  SAVE API KEY','btn-primary',doSaveKey));
+  if (S.apiKey) keyCard.appendChild(el('div',{style:{marginTop:'8px'}},btn('🗑️  REMOVE KEY','btn-red',doRemoveKey)));
+  scroll.appendChild(keyCard);
+
+  // Divider
+  const div1 = div('divider');
+  div1.innerHTML = `<div class="divider-line"></div><div class="divider-text">HOW TO GET YOUR FREE API KEY</div><div class="divider-line"></div>`;
+  scroll.appendChild(div1);
+
+  // Steps
+  const steps = [
+    {n:'1',title:'Open the Anthropic Console',body:'Tap the link below. It will open the Anthropic website in your browser.',link:'https://console.anthropic.com',linkLabel:'→  Open console.anthropic.com'},
+    {n:'2',title:'Create a Pay-As-You-Go Account',body:'Tap "Sign Up". Enter your email and create a password. Verify your email from the inbox. Then go to "Billing" and add your card. You only pay for what you use — no monthly fee.'},
+    {n:'3',title:'Go to "API Keys"',body:'In the left menu of the Console, tap "API Keys". Tap the green "Create Key" button. Name it "SafeSite App".'},
+    {n:'4',title:'Copy Your API Key',body:'Your key starts with "sk-ant-...". Tap the Copy button next to it.\n\n⚠️ It is shown only once — save it somewhere safe!'},
+    {n:'5',title:'Paste It Here',body:'Come back here, paste your key in the box above, and tap "Save API Key". You will see it turn green. You are all set!'},
+  ];
+  steps.forEach(s=>{
+    const sb = div('step');
+    const num = div('step-num',s.n);
+    const body = div('',{style:{flex:'1'}});
+    body.appendChild(el('div',{className:'step-title'},s.title));
+    body.appendChild(el('div',{className:'step-body'},s.body));
+    if (s.link) {
+      const a = el('a',{href:s.link,target:'_blank',className:'step-link'},s.linkLabel||s.link);
+      body.appendChild(a);
+    }
+    sb.append(num,body);
+    scroll.appendChild(sb);
+  });
+
+  // Cost info
+  const info = div('info-box');
+  info.innerHTML = `<div class="info-title">💡 About Costs & Privacy</div>
+    <div class="info-body">Your API key is stored only in your browser — never uploaded or shared with anyone.<br><br>
+    Each site analysis costs approximately <strong style="color:var(--text)">₹0.80 – ₹1.50</strong> (less than 2 US cents). Anthropic bills you directly. SafeSite charges nothing for AI usage.<br><br>
+    Monitor your usage anytime at <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue)">console.anthropic.com</a> under "Usage".</div>`;
+  scroll.appendChild(info);
+  scroll.appendChild(el('div',{style:{marginTop:'24px'}},btn('← BACK TO HOME','btn-outline',()=>{S.view='home';render();})));
+
+  wrap.appendChild(scroll);
+  return wrap;
+}
+
+// ── ABOUT ──────────────────────────────────────────
+function screenAbout() {
+  const wrap = div('screen');
+  wrap.appendChild(hazard());
+  wrap.appendChild(hdr('ABOUT',()=>{S.view='home';render();}));
+  const scroll = div('scroll',{style:{paddingTop:'40px',textAlign:'center'}});
+
+  scroll.appendChild(logo());
+  scroll.appendChild(el('h2',{style:{fontFamily:'Rajdhani,sans-serif',fontSize:'22px',fontWeight:'700',color:'var(--green)',letterSpacing:'2px',marginTop:'18px',marginBottom:'6px'}},'SAFESITE'));
+  scroll.appendChild(el('p',{style:{color:'var(--muted)',fontSize:'11px',marginBottom:'32px',letterSpacing:'1px'}},'CONSTRUCTION SITE RISK ASSESSMENT'));
+
+  const rows = [['Made in','India with ❤️ for construction'],['Copyright','© Avijit Choudhuri'],['Version','1.0 – March 2026'],['Contact','brainquisitive@gmail.com']];
+  const card = div('card',{style:{textAlign:'left'}});
+  rows.forEach(([lbl,val])=>{
+    const row = div('about-row');
+    row.appendChild(el('span',{className:'tag'},lbl));
+    row.appendChild(el('span',{style:{fontSize:'13px',color:'var(--sub)'}},val));
+    card.appendChild(row);
+  });
+  scroll.appendChild(card);
+  scroll.appendChild(el('div',{style:{marginTop:'24px'}},btn('← BACK TO HOME','btn-primary',()=>{S.view='home';render();})));
+
+  wrap.appendChild(scroll);
+  return wrap;
+}
+
+// ═══════════════════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════════════════
+function doAuth() {
+  S.authError = '';
+  const {email, password, name} = S.form;
+  if (!email || !password) { S.authError = 'Please fill all required fields.'; render(); return; }
+  const users = getUsers();
+  if (S.authMode === 'login') {
+    const u = users.find(u => u.email.toLowerCase()===email.toLowerCase() && u.password===password);
+    if (!u) { S.authError = 'Invalid email or password.'; render(); return; }
+    S.user = u; S.apiKey = getApiKey(u.email); S.apiKeyDraft = S.apiKey;
+    S.reports = getReports(u.email); S.view = 'home'; render();
+  } else {
+    if (!name.trim())         { S.authError='Please enter your full name.'; render(); return; }
+    if (password.length < 6)  { S.authError='Password must be at least 6 characters.'; render(); return; }
+    if (users.find(u=>u.email.toLowerCase()===email.toLowerCase())) { S.authError='Email already registered. Please log in.'; render(); return; }
+    const nu = {email:email.toLowerCase().trim(), password, name:name.trim()};
+    putUsers([...users, nu]);
+    S.user=nu; S.reports=[]; S.apiKey=''; S.apiKeyDraft=''; S.view='home'; render();
+  }
+}
+
+function doLogout() {
+  S.user=null; S.view='login'; S.form={email:'',password:'',name:''};
+  S.img=null; S.result=null; S.reports=[]; S.saved=false;
+  S.imgError=''; S.apiKey=''; S.apiKeyDraft=''; render();
+}
+
+function doSaveKey() {
+  const k = S.apiKeyDraft.trim();
+  if (!k.startsWith('sk-ant-')) { alert('Your Anthropic API key should start with "sk-ant-". Please check and try again.'); return; }
+  putApiKey(S.user.email, k); S.apiKey=k;
+  alert('✅ API key saved! You can now start analyzing sites.'); render();
+}
+
+function doRemoveKey() {
+  if (!confirm('Remove your API key?')) return;
+  putApiKey(S.user.email,''); S.apiKey=''; S.apiKeyDraft=''; render();
+}
+
+function onFileSelected(e) {
+  if (!S.apiKey) {
+    if (confirm('You need to set your Anthropic API key first.\n\nGo to Settings now?')) { S.view='settings'; render(); }
+    return;
+  }
+  const file = e.target.files[0]; if (!file) return; e.target.value='';
+  const reader = new FileReader();
+  reader.onload = ev => {
+    S.img = {dataUrl:ev.target.result, mimeType:file.type||'image/jpeg'};
+    S.imgError=''; S.saved=false; S.view='preview'; render();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function doAnalyze() {
+  if (!S.img||S.busy) return;
+  if (!S.apiKey) { alert('Please add your Anthropic API key in Settings first.'); return; }
+  S.busy=true; S.imgError=''; render();
+
+  try {
+    const b64 = S.img.dataUrl.split(',')[1];
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1000,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:S.img.mimeType,data:b64}},
+          {type:'text',text:`You are a certified construction site safety inspector with 20+ years of experience. Analyze this image and respond ONLY with valid JSON — no markdown, no explanation, no preamble.
+
+VALIDATION FIRST:
+- If image is too blurry or low-resolution for safety analysis: {"valid":false,"reason":"resolution"}
+- If image is not a construction site: {"valid":false,"reason":"not_construction_site"}
+
+IF VALID, return this exact structure:
+{"valid":true,"overallSafetyScore":<integer 1-5>,"summaryComment":"<2-3 sentences about site safety>","confidenceLevel":"<High|Medium|Low>","risks":[{"riskId":"R001","riskDescription":"<specific hazard visible>","impactScore":<1-5>,"likelihoodScore":<1-5>,"riskScore":<impact x likelihood>,"suggestedImprovement":"<1-2 practical measures>"}]}
+
+Rules: Identify 3-7 major risks. Impact 1-5, Likelihood 1-5, Risk Score = Impact x Likelihood. Overall Safety 1-5. Be specific to what you see.`}
+        ]}]
+      })
+    });
+    const d = await resp.json();
+    if (d.error) { S.imgError = d.error.type==='authentication_error'?'invalid_key':'error'; S.busy=false; render(); return; }
+    const txt = (d.content||[]).map(b=>b.text||'').join('');
+    const res = JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if (!res.valid) { S.imgError=res.reason||'error'; }
+    else { res.analyzedAt=new Date().toISOString(); res.imageDataUrl=S.img.dataUrl; S.result=res; S.saved=false; S.view='results'; }
+  } catch(e) { console.error(e); S.imgError='error'; }
+  S.busy=false; render();
+}
+
+function doSave() {
+  if (!S.result||S.saved) return;
+  const rpt = {id:Date.now().toString(),...S.result,savedAt:new Date().toISOString()};
+  S.reports=[rpt,...S.reports]; putReports(S.user.email,S.reports); S.saved=true; render();
+  alert('✅ Report saved successfully.');
+}
+
+function doDelete(id) {
+  S.reports=S.reports.filter(r=>r.id!==id); putReports(S.user.email,S.reports);
+  S.deleteId=null;
+  if(S.viewing?.id===id){S.viewing=null;S.view='history';}
+  render();
+}
+
+function doDownload(res) {
+  const esc = v=>`"${String(v).replace(/"/g,'""')}"`;
+  const lines=[];
+  lines.push(esc('SafeSite — SAFETY REPORT'));
+  lines.push('');
+  lines.push([esc('Analyzed on'),esc(new Date(res.analyzedAt).toLocaleString())].join(','));
+  lines.push([esc('Analyzed by'),esc(S.user?.name||'')].join(','));
+  lines.push('');
+  lines.push([esc('OVERALL SAFETY SCORE'),esc(`${res.overallSafetyScore} / 5`)].join(','));
+  lines.push([esc('SAFETY RATING'),esc(SAFETY_LABELS[res.overallSafetyScore]||'')].join(','));
+  lines.push([esc('SUMMARY'),esc(res.summaryComment)].join(','));
+  lines.push([esc('AI CONFIDENCE LEVEL'),esc(res.confidenceLevel)].join(','));
+  lines.push('');
+  lines.push([esc('DISCLAIMER'),esc('This risk register is machine generated and may not be exhaustive. Manual checking of the site by a qualified expert is strongly recommended.')].join(','));
+  lines.push('');
+  lines.push(['Risk ID','Risk Description','Impact Score (1-5)','Likelihood Score (1-5)','Risk Score (1-25)','Suggested Improvement'].map(esc).join(','));
+  res.risks.forEach(r=>lines.push([r.riskId,r.riskDescription,r.impactScore,r.likelihoodScore,r.riskScore,r.suggestedImprovement].map(esc).join(',')));
+
+  const blob = new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download=`SafeSite_Report_${new Date(res.analyzedAt).toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════
+render();
+</script>
+</body>
+</html>
