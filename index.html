@@ -455,7 +455,7 @@ function doLogout(){
 
 function doSaveKey(){
   var k=S.keyDraft.trim();
-  if(!k.startsWith('sk-ant-')){alert('Your key should start with "sk-ant-". Please check and try again.');return;}
+  if(!k.startsWith('sk-ant-')){alert('Your key should start with "sk-ant-". Please check and try it again.');return;}
   putKey(S.user.email,k);S.key=k;
   alert('✅ API key saved! You can now analyze sites.');render();
 }
